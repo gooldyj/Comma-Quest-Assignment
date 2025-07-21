@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comma Quest: A Virtual Grammar Adventure</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Arial', sans-serif;
+            background: #1a1a1a;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        /* UI Overlay */
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        /* HUD Elements */
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 16px;
+            border: 2px solid #FFD700;
+        }
+
+        /* Multiple Choice Panel */
+        #choicePanel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(139, 69, 19, 0.95);
+            border: 3px solid #FFD700;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            display: none;
+            pointer-events: auto;
+        }
+
+        #choicePanel h3 {
+            color: #FFD700;
+            text-align: center;
+            margin-top: 0;
+            font-size: 20px;
+        }
+
+        #questionText {
+            color: white;
+            font-size: 18px;
+            line-height: 1.5;
+            margin-bottom: 20px;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .choice-button {
+            display: block;
+            width: 100%;
+            margin: 10px 0;
+            padding: 15px;
+            background: #8B4513;
+            color: white;
+            border: 2px solid #A0522D;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .choice-button:hover {
+            background: #A0522D;
+            transform: translateY(-2px);
+        }
+
+        .choice-button.correct {
+            background: #2ECC71;
+            border-color: #27AE60;
+        }
+
+        .choice-button.incorrect {
+            background: #E74C3C;
+            border-color: #C0392B;
+        }
+
+        /* Owl Dialogue */
+        #owlDialogue {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(101, 67, 33, 0.95);
+            border: 3px solid #FFD700;
+            border-radius: 20px;
+            padding: 20px;
+            max-width: 500px;
+            width: 90%;
+            color: white;
+            text-align: center;
+            font-size: 16px;
+            display: none;
+            pointer-events: auto;
+        }
+
+        #owlDialogue .owl-name {
+            color: #FFD700;
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        /* Controls */
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            pointer-events: auto;
+        }
+
+        .control-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 60px);
+            gap: 5px;
+        }
+
+        .control-button {
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            border: 2px solid #FFD700;
+            border-radius: 8px;
+            width: 60px;
+            height: 60px;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .control-button:hover {
+            background: rgba(255, 215, 0, 0.3);
+        }
+
+        .invisible {
+            visibility: hidden;
+        }
+
+        /* Instructions */
+        #instructions {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+            pointer-events: auto;
+            border: 3px solid #FFD700;
+        }
+
+        #instructions button {
+            background: #2ECC71;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        #instructions button:hover {
+            background: #27AE60;
+        }
+
+        /* Loading indicator */
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 20px;
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            #hud {
+                font-size: 14px;
+                padding: 10px;
+            }
+            
+            #choicePanel {
+                padding: 20px;
+                width: 95%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="loading">🌟 Loading Grammar Adventure...</div>
+        
+        <div id="ui">
+            <div id="hud">
+                <div>🧙‍♂️ Comma Quest</div>
+                <div id="progress">Scrolls Completed: 0/3</div>
+                <div id="task">Loading magical world...</div>
+            </div>
+
+            <div id="instructions">
+                <h2>🏰 Welcome to Comma Quest!</h2>
+                <p>Enter the mystical Grammar Forest and help the wise Grammar Owl by correcting comma errors in ancient scrolls.</p>
+                <p><strong>Controls:</strong><br>
+                • Use the arrow buttons to move around<br>
+                • Click on glowing scrolls to answer questions<br>
+                • Find all 3 scrolls to complete your quest!</p>
+                <button onclick="startGame()">🌟 Begin Adventure</button>
+            </div>
+
+            <div id="choicePanel">
+                <h3>📜 Ancient Grammar Scroll</h3>
+                <div id="questionText"></div>
+                <button class="choice-button" onclick="selectChoice(0)"></button>
+                <button class="choice-button" onclick="selectChoice(1)"></button>
+                <button class="choice-button" onclick="selectChoice(2)"></button>
+            </div>
+
+            <div id="owlDialogue">
+                <div class="owl-name">🦉 Grammar Owl</div>
+                <div id="owlText"></div>
+            </div>
+
+            <div id="controls">
+                <div class="control-grid">
+                    <div class="invisible"></div>
+                    <button class="control-button" onmousedown="startMove('forward')" onmouseup="stopMove()" ontouchstart="startMove('forward')" ontouchend="stopMove()">↑</button>
+                    <div class="invisible"></div>
+                    <button class="control-button" onmousedown="startMove('left')" onmouseup="stopMove()" ontouchstart="startMove('left')" ontouchend="stopMove()">←</button>
+                    <button class="control-button" onmousedown="startMove('backward')" onmouseup="stopMove()" ontouchstart="startMove('backward')" ontouchend="stopMove()">↓</button>
+                    <button class="control-button" onmousedown="startMove('right')" onmouseup="stopMove()" ontouchstart="startMove('right')" ontouchend="stopMove()">→</button>
+                    <div class="invisible"></div>
+                    <button class="control-button" onclick="lookUp()">🔍</button>
+                    <div class="invisible"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Global variables
+        let scene, camera, renderer;
+        let gameStarted = false;
+        let scrollsCompleted = 0;
+        let currentScrollIndex = -1;
+        let isAnswering = false;
+        let currentMovement = null;
+        let movementInterval = null;
+
+        // Game objects
+        let scrolls = [];
+        let completedScrolls = [];
+        let clickableObjects = [];
+        let owl, portal;
+
+        // Game data
+        const grammarQuestions = [
+            {
+                question: "She went to the store and bought eggs milk and bread.",
+                choices: [
+                    "She went to the store and bought eggs, milk, and bread.",
+                    "She went to the store and bought eggs milk, and bread.",
+                    "She went to the store and bought eggs, milk and bread."
+                ],
+                correct: 0,
+                explanation: "Use commas to separate items in a series (Oxford comma)."
+            },
+            {
+                question: "Because he was late he missed the meeting.",
+                choices: [
+                    "Because he was late, he missed the meeting.",
+                    "Because, he was late he missed the meeting.",
+                    "Because he was late he missed, the meeting."
+                ],
+                correct: 0,
+                explanation: "Use a comma after an introductory dependent clause."
+            },
+            {
+                question: "It was a long day but they made it through.",
+                choices: [
+                    "It was a long day, but they made it through.",
+                    "It was a long day but, they made it through.",
+                    "It was a long, day but they made it through."
+                ],
+                correct: 0,
+                explanation: "Use a comma before coordinating conjunctions in compound sentences."
+            }
+        ];
+
+        const owlMessages = [
+            "Hoo goes there? Welcome to my grammar grove! Only those who master the comma may pass through my portal.",
+            "Three ancient scrolls await your wisdom. Click each glowing scroll to reveal its secrets!",
+            "Owl be impressed if you get this right! Choose the sentence with correct comma placement.",
+            "Excellent work! One scroll mastered. Continue with your quest!",
+            "Hoo-ray! Another scroll conquered! You're becoming quite the grammarian!",
+            "Magnificent! You've mastered the mystical art of comma placement. The portal awaits!"
+        ];
+
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        function init() {
+            showLoading();
+            
+            try {
+                // Check WebGL support
+                if (!window.WebGLRenderingContext) {
+                    throw new Error('WebGL not supported');
+                }
+
+                // Scene setup
+                scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x87CEEB);
+                scene.fog = new THREE.Fog(0x87CEEB, 10, 50);
+
+                // Camera setup
+                camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                camera.position.set(0, 2, 8);
+
+                // Renderer setup
+                renderer = new THREE.WebGLRenderer({ antialias: true });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                
+                const container = document.getElementById('gameContainer');
+                container.appendChild(renderer.domElement);
+
+                // Setup lighting
+                setupLighting();
+                
+                // Create world
+                createWorld();
+                
+                // Setup interactions
+                setupInteractions();
+
+                // Start animation
+                animate();
+                
+                hideLoading();
+                updateTask("Ready to begin your quest!");
+                
+            } catch (error) {
+                console.error('Initialization error:', error);
+                hideLoading();
+                document.getElementById('instructions').innerHTML = `
+                    <h2>⚠️ Technical Issue</h2>
+                    <p>Unable to start the 3D adventure. This might be due to:</p>
+                    <ul style="text-align: left;">
+                        <li>WebGL not being supported by your browser</li>
+                        <li>Graphics drivers needing an update</li>
+                        <li>Browser security settings</li>
+                    </ul>
+                    <p>Try using Chrome or Firefox for the best experience.</p>
+                    <button onclick="location.reload()">🔄 Try Again</button>
+                `;
+            }
+        }
+
+        function setupLighting() {
+            // Ambient light
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
+
+            // Sun light
+            const sunlight = new THREE.DirectionalLight(0xffffff, 0.8);
+            sunlight.position.set(10, 10, 5);
+            sunlight.castShadow = true;
+            sunlight.shadow.camera.near = 0.1;
+            sunlight.shadow.camera.far = 50;
+            sunlight.shadow.camera.left = -20;
+            sunlight.shadow.camera.right = 20;
+            sunlight.shadow.camera.top = 20;
+            sunlight.shadow.camera.bottom = -20;
+            scene.add(sunlight);
+        }
+
+        function createWorld() {
+            // Ground
+            const groundGeometry = new THREE.PlaneGeometry(100, 100);
+            const groundMaterial = new THREE.MeshLambertMaterial({ color: 0x228B22 });
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            scene.add(ground);
+
+            // Create main structures
+            createGrammarHut();
+            createForest();
+            createOwl();
+            createPortal();
+        }
+
+        function createGrammarHut() {
+            const hutGroup = new THREE.Group();
+
+            // Main hut structure
+            const hutGeometry = new THREE.BoxGeometry(6, 4, 6);
+            const hutMaterial = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+            const hut = new THREE.Mesh(hutGeometry, hutMaterial);
+            hut.position.y = 2;
+            hut.castShadow = true;
+            hut.receiveShadow = true;
+            hutGroup.add(hut);
+
+            // Roof
+            const roofGeometry = new THREE.ConeGeometry(4.5, 2, 4);
+            const roofMaterial = new THREE.MeshLambertMaterial({ color: 0x654321 });
+            const roof = new THREE.Mesh(roofGeometry, roofMaterial);
+            roof.position.y = 5;
+            roof.rotation.y = Math.PI / 4;
+            roof.castShadow = true;
+            hutGroup.add(roof);
+
+            // Windows with glow
+            createWindows(hutGroup);
+            
+            // Interior furniture
+            createFurniture(hutGroup);
+            
+            // Scrolls
+            createScrolls(hutGroup);
+
+            scene.add(hutGroup);
+        }
+
+        function createWindows(hutGroup) {
+            // Window geometry
+            const windowGeometry = new THREE.PlaneGeometry(0.8, 0.8);
+            const windowMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0xFFFFAA, 
+                transparent: true, 
+                opacity: 0.8 
+            });
+            
+            // Left window
+            const window1 = new THREE.Mesh(windowGeometry, windowMaterial);
+            window1.position.set(-2.9, 2.5, 1);
+            window1.rotation.y = Math.PI / 2;
+            hutGroup.add(window1);
+
+            // Right window
+            const window2 = new THREE.Mesh(windowGeometry, windowMaterial);
+            window2.position.set(2.9, 2.5, 1);
+            window2.rotation.y = -Math.PI / 2;
+            hutGroup.add(window2);
+
+            // Window lights
+            const windowLight1 = new THREE.PointLight(0xFFFFAA, 0.5, 10);
+            windowLight1.position.set(-3, 2.5, 1);
+            hutGroup.add(windowLight1);
+
+            const windowLight2 = new THREE.PointLight(0xFFFFAA, 0.5, 10);
+            windowLight2.position.set(3, 2.5, 1);
+            hutGroup.add(windowLight2);
+        }
+
+        function createFurniture(hutGroup) {
+            // Central table
+            const tableGeometry = new THREE.BoxGeometry(2, 0.1, 1);
+            const tableMaterial = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+            const table = new THREE.Mesh(tableGeometry, tableMaterial);
+            table.position.set(0, 1, 0);
+            table.castShadow = true;
+            table.receiveShadow = true;
+            hutGroup.add(table);
+
+            // Table legs
+            const legGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.9);
+            const legPositions = [[-0.8, 0.5, -0.4], [0.8, 0.5, -0.4], [-0.8, 0.5, 0.4], [0.8, 0.5, 0.4]];
+            
+            legPositions.forEach(pos => {
+                const leg = new THREE.Mesh(legGeometry, tableMaterial);
+                leg.position.set(...pos);
+                leg.castShadow = true;
+                hutGroup.add(leg);
+            });
+
+            // Chairs/stumps around table
+            const stumpGeometry = new THREE.CylinderGeometry(0.3, 0.35, 0.5);
+            const stumpMaterial = new THREE.MeshLambertMaterial({ color: 0x654321 });
+            const stumpPositions = [[-1.5, 0.25, -1], [1.5, 0.25, -1], [-1.5, 0.25, 1], [1.5, 0.25, 1]];
+
+            stumpPositions.forEach(pos => {
+                const stump = new THREE.Mesh(stumpGeometry, stumpMaterial);
+                stump.position.set(...pos);
+                stump.castShadow = true;
+                stump.receiveShadow = true;
+                hutGroup.add(stump);
+            });
+        }
+
+        function createScrolls(hutGroup) {
+            const scrollPositions = [[-0.7, 1.15, 0], [0, 1.15, 0], [0.7, 1.15, 0]];
+
+            scrollPositions.forEach((pos, index) => {
+                // Scroll body
+                const scrollGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.3);
+                const scrollMaterial = new THREE.MeshLambertMaterial({ color: 0xF5DEB3 });
+                const scroll = new THREE.Mesh(scrollGeometry, scrollMaterial);
+                scroll.position.set(...pos);
+                scroll.rotation.z = Math.PI / 2;
+                scroll.castShadow = true;
+                
+                // Add glow effect
+                const glowGeometry = new THREE.SphereGeometry(0.2);
+                const glowMaterial = new THREE.MeshBasicMaterial({ 
+                    color: 0xFFD700, 
+                    transparent: true, 
+                    opacity: 0.3 
+                });
+                const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+                glow.position.copy(scroll.position);
+                
+                // Group scroll with glow
+                const scrollGroup = new THREE.Group();
+                scrollGroup.add(scroll);
+                scrollGroup.add(glow);
+                scrollGroup.userData = { type: 'scroll', index: index };
+                
+                scrolls.push(scrollGroup);
+                clickableObjects.push(scrollGroup);
+                hutGroup.add(scrollGroup);
+            });
+        }
+
+        function createForest() {
+            const treePositions = [
+                [-8, 0, -8], [8, 0, -8], [-8, 0, 8], [8, 0, 8],
+                [-12, 0, 0], [12, 0, 0], [0, 0, -12], [0, 0, 12]
+            ];
+
+            treePositions.forEach(pos => {
+                const treeGroup = new THREE.Group();
+                
+                // Trunk
+                const trunkGeometry = new THREE.CylinderGeometry(0.2, 0.3, 3);
+                const trunkMaterial = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+                const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+                trunk.position.y = 1.5;
+                trunk.castShadow = true;
+                treeGroup.add(trunk);
+
+                // Leaves
+                const leavesGeometry = new THREE.SphereGeometry(1.5);
+                const leavesMaterial = new THREE.MeshLambertMaterial({ color: 0x228B22 });
+                const leaves = new THREE.Mesh(leavesGeometry, leavesMaterial);
+                leaves.position.y = 3.5;
+                leaves.castShadow = true;
+                treeGroup.add(leaves);
+
+                treeGroup.position.set(...pos);
+                scene.add(treeGroup);
+            });
+        }
+
+        function createOwl() {
+            owl = new THREE.Group();
+
+            // Body
+            const bodyGeometry = new THREE.SphereGeometry(0.3, 8, 6);
+            const bodyMaterial = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.position.y = 0.3;
+            body.castShadow = true;
+            owl.add(body);
+
+            // Head
+            const headGeometry = new THREE.SphereGeometry(0.25, 8, 6);
+            const head = new THREE.Mesh(headGeometry, bodyMaterial);
+            head.position.y = 0.7;
+            head.castShadow = true;
+            owl.add(head);
+
+            // Eyes
+            const eyeGeometry = new THREE.SphereGeometry(0.08);
+            const eyeMaterial = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+            
+            const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+            leftEye.position.set(-0.1, 0.75, 0.2);
+            owl.add(leftEye);
+
+            const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+            rightEye.position.set(0.1, 0.75, 0.2);
+            owl.add(rightEye);
+
+            // Pupils
+            const pupilGeometry = new THREE.SphereGeometry(0.03);
+            const pupilMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+            
+            const leftPupil = new THREE.Mesh(pupilGeometry, pupilMaterial);
+            leftPupil.position.set(-0.1, 0.75, 0.25);
+            owl.add(leftPupil);
+
+            const rightPupil = new THREE.Mesh(pupilGeometry, pupilMaterial);
+            rightPupil.position.set(0.1, 0.75, 0.25);
+            owl.add(rightPupil);
+
+            // Beak
+            const beakGeometry = new THREE.ConeGeometry(0.05, 0.1, 3);
+            const beakMaterial = new THREE.MeshLambertMaterial({ color: 0xFFA500 });
+            const beak = new THREE.Mesh(beakGeometry, beakMaterial);
+            beak.position.set(0, 0.65, 0.25);
+            beak.rotation.x = Math.PI;
+            owl.add(beak);
+
+            owl.position.set(-4, 3, 4);
+            scene.add(owl);
+        }
+
+        function createPortal() {
+            portal = new THREE.Group();
+
+            // Portal ring
+            const ringGeometry = new THREE.TorusGeometry(1.5, 0.1, 8, 16);
+            const ringMaterial = new THREE.MeshBasicMaterial({ color: 0x00FFFF });
+            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+            ring.position.set(0, 2, 12);
+            portal.add(ring);
+
+            // Portal glow
+            const glowGeometry = new THREE.RingGeometry(0.5, 2, 32);
+            const glowMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0x00FFFF, 
+                transparent: true, 
+                opacity: 0.3,
+                side: THREE.DoubleSide
+            });
+            const portalGlow = new THREE.Mesh(glowGeometry, glowMaterial);
+            portalGlow.position.set(0, 2, 12);
+            portal.add(portalGlow);
+
+            // Portal light
+            const portalLight = new THREE.PointLight(0x00FFFF, 1, 10);
+            portalLight.position.set(0, 2, 12);
+            portal.add(portalLight);
+
+            portal.visible = false;
+            scene.add(portal);
+        }
+
+        function setupInteractions() {
+            renderer.domElement.addEventListener('click', onCanvasClick);
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function onCanvasClick(event) {
+            if (!gameStarted || isAnswering) return;
+
+            const rect = renderer.domElement.getBoundingClientRect();
+            const mouse = new THREE.Vector2();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+            
+            const intersects = raycaster.intersectObjects(clickableObjects, true);
+            
+            if (intersects.length > 0) {
+                const clickedObject = intersects[0].object.parent || intersects[0].object;
+                if (clickedObject.userData && clickedObject.userData.type === 'scroll') {
+                    const scrollIndex = clickedObject.userData.index;
+                    if (!completedScrolls.includes(scrollIndex)) {
+                        clickScroll(scrollIndex);
+                    }
+                }
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // Movement functions
+        function startMove(direction) {
+            currentMovement = direction;
+            if (movementInterval) clearInterval(movementInterval);
+            movementInterval = setInterval(() => {
+                if (currentMovement && gameStarted) {
+                    moveCamera(currentMovement);
+                }
+            }, 50);
+        }
+
+        function stopMove() {
+            currentMovement = null;
+            if (movementInterval) {
+                clearInterval(movementInterval);
+                movementInterval = null;
+            }
+        }
+
+        function moveCamera(direction) {
+            const speed = 0.2;
+            const moveVector = new THREE.Vector3();
+
+            switch(direction) {
+                case 'forward':
+                    moveVector.z = -speed;
+                    break;
+                case 'backward':
+                    moveVector.z = speed;
+                    break;
+                case 'left':
+                    moveVector.x = -speed;
+                    break;
+                case 'right':
+                    moveVector.x = speed;
+                    break;
+            }
+
+            moveVector.applyQuaternion(camera.quaternion);
+            camera.position.add(moveVector);
+            camera.position.y = Math.max(0.5, Math.min(camera.position.y, 5)); // Keep reasonable height
+        }
+
+        function lookUp() {
+            camera.rotation.x = Math.max(-Math.PI/3, camera.rotation.x - 0.1);
+        }
+
+        // Game logic functions
+        function clickScroll(index) {
+            if (isAnswering) return;
+            
+            currentScrollIndex = index;
+            isAnswering = true;
+            
+            const question = grammarQuestions[index];
+            
+            document.getElementById('questionText').textContent = `❌ ${question.question}`;
+            
+            const buttons = document.querySelectorAll('.choice-button');
+            buttons.forEach((button, i) => {
+                button.textContent = `✅ ${question.choices[i]}`;
+                button.className = 'choice-button';
+                button.disabled = false;
+            });
+            
+            document.getElementById('choicePanel').style.display = 'block';
+            updateTask("Choose the correct comma usage!");
+        }
+
+        function selectChoice(choiceIndex) {
+            const question = grammarQuestions[currentScrollIndex];
+            const buttons = document.querySelectorAll('.choice-button');
+            
+            buttons.forEach(button => button.disabled = true);
+            
+            if (choiceIndex === question.correct) {
+                buttons[choiceIndex].classList.add('correct');
+                completeScroll();
+                
+                setTimeout(() => {
+                    document.getElementById('choicePanel').style.display = 'none';
+                    isAnswering = false;
+                    
+                    if (scrollsCompleted < 3) {
+                        showOwlMessage(owlMessages[2 + scrollsCompleted]);
+                    }
+                }, 1500);
+            } else {
+                buttons[choiceIndex].classList.add('incorrect');
+                buttons[question.correct].classList.add('correct');
+                
+                setTimeout(() => {
+                    buttons.forEach(button => {
+                        button.className = 'choice-button';
+                        button.disabled = false;
+                    });
+                }, 2000);
+            }
+        }
+
+        function completeScroll() {
+            completedScrolls.push(currentScrollIndex);
+            scrollsCompleted++;
+            
+            // Move scroll to center and make it smaller
+            const scroll = scrolls[currentScrollIndex];
+            scroll.position.set(0, 1.2, 0);
+            scroll.scale.set(0.7, 0.7, 0.7);
+            
+            // Remove from clickable objects
+            const index = clickableObjects.indexOf(scroll);
+            if (index > -1) {
+                clickableObjects.splice(index, 1);
+            }
+            
+            updateProgress();
+            
+            if (scrollsCompleted === 3) {
+                setTimeout(() => {
+                    showOwlMessage(owlMessages[5]);
+                    portal.visible = true;
+                    updateTask("Quest complete! Walk toward the glowing portal!");
+                }, 2000);
+            } else {
+                updateTask("Great! Find another glowing scroll to continue.");
+            }
+        }
+
+        function updateProgress() {
+            document.getElementById('progress').textContent = `Scrolls Completed: ${scrollsCompleted}/3`;
+        }
+
+        function updateTask(text) {
+            document.getElementById('task').textContent = text;
+        }
+
+        function showOwlMessage(message) {
+            document.getElementById('owlText').textContent = message;
+            document.getElementById('owlDialogue').style.display = 'block';
+            
+            setTimeout(() => {
+                document.getElementById('owlDialogue').style.display = 'none';
+            }, 4000);
+        }
+
+        function startGame() {
+            gameStarted = true;
+            document.getElementById('instructions').style.display = 'none';
+            
+            setTimeout(() => {
+                showOwlMessage(owlMessages[0]);
+            }, 1000);
+            
+            setTimeout(() => {
+                showOwlMessage(owlMessages[1]);
+                updateTask("Click on a glowing scroll to begin!");
+            }, 6000);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const time = Date.now() * 0.002;
+            
+            // Animate owl bobbing
+            if (owl) {
+                owl.position.y = 3 + Math.sin(time) * 0.2;
+                owl.rotation.y = Math.sin(time * 0.5) * 0.3;
+            }
+            
+            // Animate portal
+            if (portal && portal.visible) {
+                portal.rotation.y += 0.02;
+                portal.children[1].rotation.z += 0.01;
+            }
+            
+            // Animate scrolls
+            scrolls.forEach((scroll, index) => {
+                if (!completedScrolls.includes(index)) {
+                    scroll.position.y = 1.15 + Math.sin(time + index) * 0.05;
+                    // Glow effect
+                    if (scroll.children[1]) {
+                        scroll.children[1].material.opacity = 0.3 + Math.sin(time * 2 + index) * 0.2;
+                    }
+                }
+            });
+            
+            renderer.render(scene, camera);
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
